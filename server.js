@@ -1,15 +1,15 @@
 const express = require('express');
 const app = express();
-
 const jwt = require('jsonwebtoken');
 const { expressjwt: exjwt } = require('express-jwt');
-
 const bodyParser = require('body-parser');
 const path = require('path');
 
+// CORS headers to allow frontend to communicate with backend
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-type,Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST');
   next();
 });
 
@@ -17,17 +17,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const PORT = 3000;
-//can also use process.env. environment variables
 const secretKey = "My super secret key :):)";
-const TOKEN_EXPIRATION_TIME = 1 * 60; // 3 minutes
+const TOKEN_EXPIRATION_TIME = 3 * 60; // 3 minutes
 
-// Set up JWT middleware
+// JWT middleware
 const jwtMW = exjwt({
   secret: secretKey,
   algorithms: ['HS256'],
 });
 
-// Dummy users(hardcoded)
+// Hardcoded users
 let users = [
   { id: 1, username: 'nikshitha reddy', password: '123' },
   { id: 2, username: 'aella', password: '456' }
@@ -53,7 +52,6 @@ app.post('/api/login', (req, res) => {
     }
   }
 
-  // If no matching user is found
   res.status(401).json({
     success: false,
     token: null,
@@ -65,13 +63,13 @@ app.post('/api/login', (req, res) => {
 app.use('/api', jwtMW, (req, res, next) => {
   const user = users.find((u) => u.id === req.auth.id);
   if (user) {
-    const newToken = generateToken(user);  // Generate a new token on every request
+    const newToken = generateToken(user);
     res.setHeader('Authorization', `Bearer ${newToken}`);
   }
   next();
 });
 
-// Protected Dashboard Route
+// Dashboard Route
 app.get('/api/dashboard', (req, res) => {
   res.json({
     success: true,
@@ -79,14 +77,7 @@ app.get('/api/dashboard', (req, res) => {
   });
 });
 
-app.get("/api/prices", (req, res) => {
-  res.json({
-    success: true,
-    myContent: "This is price $3.99 ;);)"
-  });
-});
-
-// Protected Settings Route
+// Settings Route
 app.get('/api/settings', (req, res) => {
   res.json({
     success: true,
@@ -94,7 +85,7 @@ app.get('/api/settings', (req, res) => {
   });
 });
 
-// Serve index.html on root
+// Serve the HTML file
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

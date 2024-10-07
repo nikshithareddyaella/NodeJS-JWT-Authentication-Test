@@ -13,7 +13,6 @@
   <div class="container-fluid">
     <h1 class="row">Login Here</h1>
     <main>
-      <!-- Login Form -->
       <div class="row">
         <label for="username">Username</label>
         <input type="text" name="username" id="username" />
@@ -27,140 +26,122 @@
       <div>
         <button onclick="login()">Login</button>
         <button onclick="getDashboard()">Get Dashboard</button>
-        <button onclick="getSettings()">Settings</button> 
+        <button onclick="getSettings()">Settings</button>
       </div>
     </main>
   </div>
 
   <script>
-        function login() {
-        const data = {
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value,
-        };
-        axios.post("/api/login", data)
-            .then((res) => {
-            document.getElementById("username").value = "";
-            document.getElementById("password").value = "";
-            if (res && res.data && res.data.success) {
-                const token = res.data.token;
-                localStorage.setItem("jwt", token);
-                getDashboard();
-            }
-            });
-        }
-
-        function getDashboard() {
-        const token = localStorage.getItem("jwt");
-        if (!token) return alert('Please login first');
-
-        axios.get("/api/dashboard", {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then((res) => {
-            const newToken = res.headers['authorization'].split(' ')[1]; // Extract new token from Authorization header
-            localStorage.setItem('jwt', newToken); // Update token in localStorage
-
-            if (res && res.data && res.data.success) {
-                document.querySelector("h1.row").innerHTML = "Dashboard";
-                document.querySelector("main").innerHTML = `
-                <p>${res.data.myContent}</p>
-                <button onclick="getSettings()">Settings</button>
-                <button onclick="logout()">Logout</button>
-                `;
-                history.pushState(null, null, '/dashboard');  // Update URL
-            }
-            })
-            .catch(handleError);
-        }
-
-        function getSettings() {
-        const token = localStorage.getItem("jwt");
-        if (!token) return alert('Please login first');
-
-        axios.get("/api/settings", {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then((res) => {
-            const newToken = res.headers['authorization'].split(' ')[1]; // Extract new token from Authorization header
-            localStorage.setItem('jwt', newToken); // Update token in localStorage
-
-            if (res && res.data && res.data.success) {
-                document.querySelector("h1.row").innerHTML = "Settings";
-                document.querySelector("main").innerHTML = `
-                <p>${res.data.myContent}</p>
-                <button onclick="getDashboard()">Dashboard</button>
-                <button onclick="logout()">Logout</button>
-                `;
-                history.pushState(null, null, '/settings');  // Update URL
-            }
-            })
-            .catch(handleError);
-        }
-
-        function logout() {
-        localStorage.removeItem('jwt');
-        window.location.href = '/';  // Redirect to login
-        }
-
-        function handleError(err) {
-        if (err.response && err.response.status === 401) {
-            alert("Session expired. Redirecting to login.");
-            localStorage.removeItem('jwt');
-            window.location.href = '/';
-        } else {
-            console.error("Error: ", err);
-        }
-        }
-
-        function onLoad() {
-        const token = localStorage.getItem('jwt');
-        if (token) {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const exp = payload.exp * 1000;
-            const now = Date.now();
-
-            if (now >= exp) {
-            localStorage.removeItem('jwt');
-            window.location.href = '/';
-            } else {
+    function login() {
+      const data = {
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value,
+      };
+      axios.post("/api/login", data)
+        .then((res) => {
+          document.getElementById("username").value = "";
+          document.getElementById("password").value = "";
+          if (res && res.data && res.data.success) {
+            const token = res.data.token;
+            localStorage.setItem("jwt", token);
             getDashboard();
-            }
-        }
-        }
+          }
+        })
+        .catch((err) => alert("Invalid login details"));
+    }
 
-        onLoad();
+    function getDashboard() {
+      const token = localStorage.getItem("jwt");
+      if (!token) return alert('Please login first');
 
-
-    // Handle browser back/forward button
-    window.onpopstate = function(event) {
-      const path = window.location.pathname;
-      if (path === '/dashboard') {
-        getDashboard();
-      } else if (path === '/settings') {
-        getSettings();
-      } else {
-        history.replaceState(null, null, '/');
-        document.querySelector("h1.row").innerHTML = "Login Here";
-        document.querySelector("main").innerHTML = `
-          <div class="row">
-            <label for="username">Username</label>
-            <input type="text" name="username" id="username" />
-          </div>
-          <div class="row">
-            <label for="password">Password</label>
-            <input type="password" name="password" id="password" />
-          </div>
-          <div>
-            <button onclick="login()">Login</button>
-            <button onclick="getDashboard()">Get Dashboard</button>
-            <button onclick="getSettings()">Settings</button>
-          </div>
-        `;
+      if (isTokenExpired(token)) {
+        alert("Token expired, please login again.");
+        logout();
+        return;
       }
-    };
+
+      axios.get("/api/dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          const newToken = res.headers['authorization'].split(' ')[1]; // Extract new token from Authorization header
+          localStorage.setItem('jwt', newToken); // Update token in localStorage
+
+          if (res && res.data && res.data.success) {
+            document.querySelector("h1.row").innerHTML = "Dashboard";
+            document.querySelector("main").innerHTML = `
+              <p>${res.data.myContent}</p>
+              <button onclick="getSettings()">Settings</button>
+              <button onclick="logout()">Logout</button>
+            `;
+            history.pushState(null, null, '/dashboard');  // Update URL
+          }
+        })
+        .catch(handleError);
+    }
+
+    function getSettings() {
+      const token = localStorage.getItem("jwt");
+      if (!token) return alert('Please login first');
+
+      if (isTokenExpired(token)) {
+        alert("Token expired, please login again.");
+        logout();
+        return;
+      }
+
+      axios.get("/api/settings", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          const newToken = res.headers['authorization'].split(' ')[1]; // Extract new token from Authorization header
+          localStorage.setItem('jwt', newToken); // Update token in localStorage
+
+          if (res && res.data && res.data.success) {
+            document.querySelector("h1.row").innerHTML = "Settings";
+            document.querySelector("main").innerHTML = `
+              <p>${res.data.myContent}</p>
+              <button onclick="getDashboard()">Dashboard</button>
+              <button onclick="logout()">Logout</button>
+            `;
+            history.pushState(null, null, '/settings');  // Update URL
+          }
+        })
+        .catch(handleError);
+    }
+
+    function logout() {
+      localStorage.removeItem('jwt');
+      window.location.href = '/';  // Redirect to login
+    }
+
+    function handleError(err) {
+      if (err.response && err.response.status === 401) {
+        alert("Session expired. Redirecting to login.");
+        localStorage.removeItem('jwt');
+        window.location.href = '/';
+      } else {
+        console.error("Error: ", err);
+      }
+    }
+
+    function isTokenExpired(token) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp * 1000; // Convert to ms
+      const now = Date.now();
+
+      return now >= exp;  // Token is expired if the current time is past the expiry time
+    }
+
+    function onLoad() {
+      const token = localStorage.getItem('jwt');
+      if (token && !isTokenExpired(token)) {
+        getDashboard();
+      }
+    }
+
+    onLoad();
   </script>
 </body>
 
 </html>
-
