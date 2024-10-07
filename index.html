@@ -33,99 +33,104 @@
   </div>
 
   <script>
-    function login() {
-      const data = {
-        username: document.getElementById("username").value,
-        password: document.getElementById("password").value,
-      };
-      axios.post("api/login", data)
-        .then((res) => {
-          document.getElementById("username").value = "";
-          document.getElementById("password").value = "";
-          if (res && res.data && res.data.success) {
-            const token = res.data.token;
-            localStorage.setItem("jwt", token);
-            getDashboard();
-          }
-        });
-    }
-
-    function getDashboard() {
-      const token = localStorage.getItem("jwt");
-      if (!token) return alert('Please login first');
-
-      axios.get("/api/dashboard", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => {
-          if (res && res.data && res.data.success) {
-            document.querySelector("h1.row").innerHTML = "Dashboard";
-            document.querySelector("main").innerHTML = `
-              <p>${res.data.myContent}</p>
-              <button onclick="getSettings()">Settings</button>
-              <button onclick="logout()">Logout</button>
-            `;
-            history.pushState(null, null, '/dashboard');  // Update URL
-          }
-        })
-        .catch(handleError);
-    }
-
-    function getSettings() {
-      const token = localStorage.getItem("jwt");
-      if (!token) return alert('Please login first');
-
-      axios.get("/api/settings", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => {
-          if (res && res.data && res.data.success) {
-            document.querySelector("h1.row").innerHTML = "Settings";
-            document.querySelector("main").innerHTML = `
-              <p>${res.data.myContent}</p>
-              <button onclick="getDashboard()">Dashboard</button>
-              <button onclick="logout()">Logout</button>
-            `;
-            history.pushState(null, null, '/settings');  // Update URL
-          }
-        })
-        .catch(handleError);
-    }
-
-    function logout() {
-      localStorage.removeItem('jwt');
-      window.location.href = '/';  // Redirect to login
-    }
-
-    function handleError(err) {
-      if (err.response && err.response.status === 401) {
-        alert("Session expired. Redirecting to login.");
-        localStorage.removeItem('jwt');
-        window.location.href = '/';
-      } else {
-        console.error("Error: ", err);
-      }
-    }
-
-    function onLoad() {
-      const token = localStorage.getItem('jwt');
-      if (token) {
-        // Decode JWT and check expiration
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const exp = payload.exp * 1000;
-        const now = Date.now();
-
-        if (now >= exp) {
-          // JWT expired, reload to login page
-          localStorage.removeItem('jwt');
-          window.location.href = '/';
-        } else {
-          getDashboard();  // Load the dashboard if JWT is still valid
+        function login() {
+        const data = {
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value,
+        };
+        axios.post("/api/login", data)
+            .then((res) => {
+            document.getElementById("username").value = "";
+            document.getElementById("password").value = "";
+            if (res && res.data && res.data.success) {
+                const token = res.data.token;
+                localStorage.setItem("jwt", token);
+                getDashboard();
+            }
+            });
         }
-      }
-    }
 
-    onLoad();
+        function getDashboard() {
+        const token = localStorage.getItem("jwt");
+        if (!token) return alert('Please login first');
+
+        axios.get("/api/dashboard", {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => {
+            const newToken = res.headers['authorization'].split(' ')[1]; // Extract new token from Authorization header
+            localStorage.setItem('jwt', newToken); // Update token in localStorage
+
+            if (res && res.data && res.data.success) {
+                document.querySelector("h1.row").innerHTML = "Dashboard";
+                document.querySelector("main").innerHTML = `
+                <p>${res.data.myContent}</p>
+                <button onclick="getSettings()">Settings</button>
+                <button onclick="logout()">Logout</button>
+                `;
+                history.pushState(null, null, '/dashboard');  // Update URL
+            }
+            })
+            .catch(handleError);
+        }
+
+        function getSettings() {
+        const token = localStorage.getItem("jwt");
+        if (!token) return alert('Please login first');
+
+        axios.get("/api/settings", {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => {
+            const newToken = res.headers['authorization'].split(' ')[1]; // Extract new token from Authorization header
+            localStorage.setItem('jwt', newToken); // Update token in localStorage
+
+            if (res && res.data && res.data.success) {
+                document.querySelector("h1.row").innerHTML = "Settings";
+                document.querySelector("main").innerHTML = `
+                <p>${res.data.myContent}</p>
+                <button onclick="getDashboard()">Dashboard</button>
+                <button onclick="logout()">Logout</button>
+                `;
+                history.pushState(null, null, '/settings');  // Update URL
+            }
+            })
+            .catch(handleError);
+        }
+
+        function logout() {
+        localStorage.removeItem('jwt');
+        window.location.href = '/';  // Redirect to login
+        }
+
+        function handleError(err) {
+        if (err.response && err.response.status === 401) {
+            alert("Session expired. Redirecting to login.");
+            localStorage.removeItem('jwt');
+            window.location.href = '/';
+        } else {
+            console.error("Error: ", err);
+        }
+        }
+
+        function onLoad() {
+        const token = localStorage.getItem('jwt');
+        if (token) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const exp = payload.exp * 1000;
+            const now = Date.now();
+
+            if (now >= exp) {
+            localStorage.removeItem('jwt');
+            window.location.href = '/';
+            } else {
+            getDashboard();
+            }
+        }
+        }
+
+        onLoad();
+
 
     // Handle browser back/forward button
     window.onpopstate = function(event) {
@@ -158,3 +163,4 @@
 </body>
 
 </html>
+
